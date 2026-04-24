@@ -1,12 +1,11 @@
-/**
- * routewatch core module
- *
- * Exports the public API for route collection.
- * Consumers import from here rather than internal files.
- */
+export { registerRoute, getRoutes, clearRoutes } from './routeCollector';
 export type { RouteDefinition } from './routeCollector';
+export { buildOpenAPISpec } from './schemaBuilder';
+export type { RouteSchema, RouteParam, OpenAPISpec } from './schemaBuilder';
 export {
-  registerRoute,
-  getRoutes,
-  clearRoutes,
-} from './routeCollector';
+  getCache,
+  setCache,
+  clearCache,
+  invalidateCache,
+  isCacheDirty,
+} from './specCache';

@@ -1,0 +1,42 @@
+import { OpenAPISpec } from './schemaBuilder';
+
+let cachedSpec: OpenAPISpec | null = null;
+let isDirty = true;
+
+/**
+ * Mark the cache as stale so the next read triggers a rebuild.
+ */
+export function invalidateCache(): void {
+  isDirty = true;
+}
+
+/**
+ * Returns true when the cache needs to be rebuilt.
+ */
+export function isCacheDirty(): boolean {
+  return isDirty;
+}
+
+/**
+ * Store a freshly built spec and mark the cache as clean.
+ */
+export function setCache(spec: OpenAPISpec): void {
+  cachedSpec = spec;
+  isDirty = false;
+}
+
+/**
+ * Retrieve the cached spec, or null if not yet built / invalidated.
+ */
+export function getCache(): OpenAPISpec | null {
+  if (isDirty) return null;
+  return cachedSpec;
+}
+
+/**
+ * Clear everything — useful in tests.
+ */
+export function clearCache(): void {
+  cachedSpec = null;
+  isDirty = true;
+}
