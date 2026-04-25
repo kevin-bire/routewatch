@@ -1,16 +1,12 @@
-/**
- * @module routewatch/core
- * Core exports for route registration, OpenAPI spec generation, and spec caching.
- */
-
 export { registerRoute, getRoutes, clearRoutes } from './routeCollector';
-export type { RouteDefinition } from './routeCollector';
+export type {
+  RouteDefinition,
+  ParameterDefinition,
+  RequestBodyDefinition,
+  ResponseDefinition,
+} from './routeCollector';
 export { buildOpenAPISpec } from './schemaBuilder';
-export type { RouteSchema, RouteParam, OpenAPISpec } from './schemaBuilder';
-export {
-  getCache,
-  setCache,
-  clearCache,
-  invalidateCache,
-  isCacheDirty,
-} from './specCache';
+export { generateSpec, generateSpecJSON } from './specGenerator';
+export { invalidateCache, isCacheDirty, setCache, getCache, clearCache } from './specCache';
+export { filterRoutes, groupRoutesByTag } from './routeFilter';
+export type { FilterOptions } from './routeFilter';
