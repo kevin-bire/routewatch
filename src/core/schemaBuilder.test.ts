@@ -19,6 +19,15 @@ describe('buildOpenAPISpec', () => {
     expect(spec.paths['/users/:id']).toBeUndefined();
   });
 
+  it('converts multiple Express-style path params in the same path', () => {
+    const routes: RouteSchema[] = [
+      { method: 'get', path: '/orgs/:orgId/users/:userId', summary: 'Get org user' },
+    ];
+    const spec = buildOpenAPISpec(routes, info);
+    expect(spec.paths['/orgs/{orgId}/users/{userId}']).toBeDefined();
+    expect(spec.paths['/orgs/:orgId/users/:userId']).toBeUndefined();
+  });
+
   it('places operation under the correct HTTP method key', () => {
     const routes: RouteSchema[] = [
       { method: 'post', path: '/items', summary: 'Create item' },
