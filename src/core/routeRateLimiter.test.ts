@@ -4,78 +4,71 @@ import {
   getAllRateLimits,
   removeRateLimit,
   clearRateLimits,
-  hasRateLimit,
+  isRateLimited,
+  makeKey,
 } from './routeRateLimiter';
 
-describe('routeRateLimiter', () => {
-  beforeEach(() => {
-    clearRateLimits();
+beforeEach(() => {
+  clearRateLimits();
+});
+
+describe('makeKey', () => {
+  it('creates a key from method and path', () => {
+    expect(makeKey('GET', '/users')).toBe('GET:/users');
+    expect(makeKey('post', '/items')).toBe('POST:/items');
+  });
+});
+
+describe('setRateLimit / getRateLimit', () => {
+  it('stores and retrieves a rate limit config', () => {
+    setRateLimit('GET', '/users', { maxRequests: 100, windowMs: 60000 });
+    const limit = getRateLimit('GET', '/users');
+    expect(limit).toBeDefined();
+    expect(limit?.maxRequests).toBe(100);
+    expect(limit?.windowMs).toBe(60000);
   });
 
-  it('should set and retrieve a rate limit for a route', () => {
-    setRateLimit('GET', '/api/users', { windowMs: 60000, maxRequests: 100 });
-    const result = getRateLimit('GET', '/api/users');
-    expect(result).toBeDefined();
-    expect(result?.method).toBe('GET');
-    expect(result?.path).toBe('/api/users');
-    expect(result?.config.maxRequests).toBe(100);
-    expect(result?.config.windowMs).toBe(60000);
+  it('returns undefined for unknown route', () => {
+    expect(getRateLimit('DELETE', '/unknown')).toBeUndefined();
   });
 
-  it('should normalize method to uppercase', () => {
-    setRateLimit('post', '/api/items', { windowMs: 30000, maxRequests: 50 });
-    const result = getRateLimit('POST', '/api/items');
-    expect(result).toBeDefined();
-    expect(result?.method).toBe('POST');
+  it('overwrites existing limit', () => {
+    setRateLimit('GET', '/users', { maxRequests: 50, windowMs: 30000 });
+    setRateLimit('GET', '/users', { maxRequests: 200, windowMs: 60000 });
+    expect(getRateLimit('GET', '/users')?.maxRequests).toBe(200);
   });
+});
 
-  it('should return undefined for unknown route', () => {
-    const result = getRateLimit('DELETE', '/api/unknown');
-    expect(result).toBeUndefined();
-  });
-
-  it('should store registeredAt timestamp', () => {
-    const before = new Date().toISOString();
-    setRateLimit('GET', '/api/ping', { windowMs: 1000, maxRequests: 10 });
-    const result = getRateLimit('GET', '/api/ping');
-    expect(result?.registeredAt).toBeDefined();
-    expect(result!.registeredAt >= before).toBe(true);
-  });
-
-  it('should return all rate limits', () => {
-    setRateLimit('GET', '/a', { windowMs: 1000, maxRequests: 5 });
-    setRateLimit('POST', '/b', { windowMs: 2000, maxRequests: 10 });
+describe('getAllRateLimits', () => {
+  it('returns all configured limits', () => {
+    setRateLimit('GET', '/users', { maxRequests: 10, windowMs: 1000 });
+    setRateLimit('POST', '/items', { maxRequests: 5, windowMs: 500 });
     const all = getAllRateLimits();
-    expect(all).toHaveLength(2);
+    expect(Object.keys(all)).toHaveLength(2);
+  });
+});
+
+describe('removeRateLimit', () => {
+  it('removes a specific rate limit', () => {
+    setRateLimit('GET', '/users', { maxRequests: 10, windowMs: 1000 });
+    removeRateLimit('GET', '/users');
+    expect(getRateLimit('GET', '/users')).toBeUndefined();
+  });
+});
+
+describe('isRateLimited', () => {
+  it('returns false when no limit is set', () => {
+    expect(isRateLimited('GET', '/no-limit', 999)).toBe(false);
   });
 
-  it('should remove a rate limit', () => {
-    setRateLimit('GET', '/api/remove', { windowMs: 1000, maxRequests: 1 });
-    expect(hasRateLimit('GET', '/api/remove')).toBe(true);
-    const removed = removeRateLimit('GET', '/api/remove');
-    expect(removed).toBe(true);
-    expect(hasRateLimit('GET', '/api/remove')).toBe(false);
+  it('returns false when under the limit', () => {
+    setRateLimit('GET', '/users', { maxRequests: 100, windowMs: 60000 });
+    expect(isRateLimited('GET', '/users', 50)).toBe(false);
   });
 
-  it('should return false when removing non-existent limit', () => {
-    const removed = removeRateLimit('PUT', '/api/ghost');
-    expect(removed).toBe(false);
-  });
-
-  it('should clear all rate limits', () => {
-    setRateLimit('GET', '/x', { windowMs: 1000, maxRequests: 1 });
-    setRateLimit('POST', '/y', { windowMs: 1000, maxRequests: 2 });
-    clearRateLimits();
-    expect(getAllRateLimits()).toHaveLength(0);
-  });
-
-  it('should support optional message in config', () => {
-    setRateLimit('GET', '/api/limited', {
-      windowMs: 60000,
-      maxRequests: 10,
-      message: 'Too many requests',
-    });
-    const result = getRateLimit('GET', '/api/limited');
-    expect(result?.config.message).toBe('Too many requests');
+  it('returns true when at or over the limit', () => {
+    setRateLimit('GET', '/users', { maxRequests: 100, windowMs: 60000 });
+    expect(isRateLimited('GET', '/users', 100)).toBe(true);
+    expect(isRateLimited('GET', '/users', 150)).toBe(true);
   });
 });
