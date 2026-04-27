@@ -1,12 +1,10 @@
 export { registerRoute, getRoutes, clearRoutes } from './routeCollector';
-export type {
-  RouteDefinition,
-  ParameterDefinition,
-  RequestBodyDefinition,
-  ResponseDefinition,
-} from './routeCollector';
 export { buildOpenAPISpec } from './schemaBuilder';
+export { invalidateCache, isCacheDirty, setCache, getCache, getLastUpdatedAt } from './specCache';
 export { generateSpec, generateSpecJSON } from './specGenerator';
-export { invalidateCache, isCacheDirty, setCache, getCache, clearCache } from './specCache';
 export { filterRoutes, groupRoutesByTag } from './routeFilter';
-export type { FilterOptions } from './routeFilter';
+export { validateRoute, validateRoutes } from './routeValidator';
+export { normalizeRoute, normalizeRoutes, normalizePath, normalizeTags } from './routeNormalizer';
+export { toYAML, exportSpec, exportSpecToFile } from './routeExporter';
+export { searchRoutes, extractSearchQuery } from './routeSearch';
+export type { SearchOptions, SearchResult } from './routeSearch';
