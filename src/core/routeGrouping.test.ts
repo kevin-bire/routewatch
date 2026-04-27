@@ -2,80 +2,92 @@ import { groupByPrefix, groupByMethod, groupByTag, groupRoutes } from './routeGr
 import { RouteDefinition } from './routeCollector';
 
 const sampleRoutes: RouteDefinition[] = [
-  { method: 'GET',    path: '/users',          summary: 'List users',   tags: ['users'] },
-  { method: 'POST',   path: '/users',          summary: 'Create user',  tags: ['users'] },
-  { method: 'GET',    path: '/users/:id',      summary: 'Get user',     tags: ['users'] },
-  { method: 'DELETE', path: '/users/:id',      summary: 'Delete user',  tags: ['users'] },
-  { method: 'GET',    path: '/products',       summary: 'List products',tags: ['products'] },
-  { method: 'POST',   path: '/products',       summary: 'Add product',  tags: ['products'] },
-  { method: 'GET',    path: '/health',         summary: 'Health check', tags: [] },
+  { method: 'GET', path: '/users', tags: ['users'], summary: 'List users' },
+  { method: 'POST', path: '/users', tags: ['users'], summary: 'Create user' },
+  { method: 'GET', path: '/users/:id', tags: ['users'], summary: 'Get user' },
+  { method: 'DELETE', path: '/users/:id', tags: ['users', 'admin'], summary: 'Delete user' },
+  { method: 'GET', path: '/posts', tags: ['posts'], summary: 'List posts' },
+  { method: 'POST', path: '/posts', tags: ['posts'], summary: 'Create post' },
+  { method: 'GET', path: '/health', tags: [], summary: 'Health check' },
 ];
 
 describe('groupByPrefix', () => {
-  it('groups routes by top-level path segment', () => {
-    const groups = groupByPrefix(sampleRoutes);
-    const keys = groups.map(g => g.key).sort();
-    expect(keys).toEqual(['/health', '/products', '/users']);
+  it('groups routes by top-level path prefix', () => {
+    const result = groupByPrefix(sampleRoutes);
+    expect(Object.keys(result)).toContain('/users');
+    expect(Object.keys(result)).toContain('/posts');
+    expect(Object.keys(result)).toContain('/health');
+    expect(result['/users']).toHaveLength(3);
+    expect(result['/posts']).toHaveLength(2);
+    expect(result['/health']).toHaveLength(1);
   });
 
-  it('puts all /users routes in the /users group', () => {
-    const groups = groupByPrefix(sampleRoutes);
-    const usersGroup = groups.find(g => g.key === '/users');
-    expect(usersGroup).toBeDefined();
-    expect(usersGroup!.routes).toHaveLength(4);
+  it('handles routes with no prefix gracefully', () => {
+    const result = groupByPrefix([{ method: 'GET', path: '/', tags: [], summary: '' }]);
+    expect(result['/']).toHaveLength(1);
   });
 
-  it('handles routes with only a root path', () => {
-    const routes: RouteDefinition[] = [{ method: 'GET', path: '/', summary: 'Root' }];
-    const groups = groupByPrefix(routes);
-    expect(groups[0].key).toBe('/');
+  it('returns empty object for empty input', () => {
+    expect(groupByPrefix([])).toEqual({});
   });
 });
 
 describe('groupByMethod', () => {
   it('groups routes by HTTP method', () => {
-    const groups = groupByMethod(sampleRoutes);
-    const keys = groups.map(g => g.key).sort();
-    expect(keys).toEqual(['DELETE', 'GET', 'POST']);
+    const result = groupByMethod(sampleRoutes);
+    expect(result['GET']).toHaveLength(4);
+    expect(result['POST']).toHaveLength(2);
+    expect(result['DELETE']).toHaveLength(1);
+  });
+
+  it('returns empty object for empty input', () => {
+    expect(groupByMethod([])).toEqual({});
   });
 
   it('normalizes method to uppercase', () => {
-    const routes: RouteDefinition[] = [{ method: 'get', path: '/foo', summary: 'Foo' }];
-    const groups = groupByMethod(routes);
-    expect(groups[0].key).toBe('GET');
-  });
-
-  it('counts GET routes correctly', () => {
-    const groups = groupByMethod(sampleRoutes);
-    const getGroup = groups.find(g => g.key === 'GET');
-    expect(getGroup!.routes).toHaveLength(4);
+    const routes: RouteDefinition[] = [{ method: 'get' as any, path: '/test', tags: [], summary: '' }];
+    const result = groupByMethod(routes);
+    expect(result['GET']).toHaveLength(1);
   });
 });
 
 describe('groupByTag', () => {
-  it('groups routes by first tag', () => {
-    const groups = groupByTag(sampleRoutes);
-    const keys = groups.map(g => g.key).sort();
-    expect(keys).toEqual(['products', 'untagged', 'users']);
+  it('groups routes by tag', () => {
+    const result = groupByTag(sampleRoutes);
+    expect(result['users']).toHaveLength(4);
+    expect(result['posts']).toHaveLength(2);
+    expect(result['admin']).toHaveLength(1);
   });
 
-  it('places routes without tags under "untagged"', () => {
-    const groups = groupByTag(sampleRoutes);
-    const untagged = groups.find(g => g.key === 'untagged');
-    expect(untagged).toBeDefined();
-    expect(untagged!.routes[0].path).toBe('/health');
+  it('places untagged routes under "untagged" key', () => {
+    const result = groupByTag(sampleRoutes);
+    expect(result['untagged']).toHaveLength(1);
+    expect(result['untagged'][0].path).toBe('/health');
+  });
+
+  it('returns empty object for empty input', () => {
+    expect(groupByTag([])).toEqual({});
   });
 });
 
 describe('groupRoutes', () => {
-  it('accepts a custom key extractor', () => {
-    const groups = groupRoutes(sampleRoutes, r => r.path.includes(':id') ? 'parameterized' : 'static');
-    const keys = groups.map(g => g.key).sort();
-    expect(keys).toEqual(['parameterized', 'static']);
+  it('groups by prefix when strategy is "prefix"', () => {
+    const result = groupRoutes(sampleRoutes, 'prefix');
+    expect(result['/users']).toBeDefined();
   });
 
-  it('returns empty array for empty input', () => {
-    const groups = groupRoutes([], r => r.method);
-    expect(groups).toHaveLength(0);
+  it('groups by method when strategy is "method"', () => {
+    const result = groupRoutes(sampleRoutes, 'method');
+    expect(result['GET']).toBeDefined();
+  });
+
+  it('groups by tag when strategy is "tag"', () => {
+    const result = groupRoutes(sampleRoutes, 'tag');
+    expect(result['users']).toBeDefined();
+  });
+
+  it('defaults to prefix grouping for unknown strategy', () => {
+    const result = groupRoutes(sampleRoutes, 'unknown' as any);
+    expect(result['/users']).toBeDefined();
   });
 });
