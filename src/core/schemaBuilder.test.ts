@@ -69,4 +69,22 @@ describe('buildOpenAPISpec', () => {
     const op = spec.paths['/ping']['get'] as Record<string, unknown>;
     expect((op.responses as Record<number, unknown>)[200]).toBeDefined();
   });
+
+  it('includes the summary in the operation when provided', () => {
+    const routes: RouteSchema[] = [
+      { method: 'get', path: '/hello', summary: 'Say hello' },
+    ];
+    const spec = buildOpenAPISpec(routes, info);
+    const op = spec.paths['/hello']['get'] as Record<string, unknown>;
+    expect(op.summary).toBe('Say hello');
+  });
+
+  it('omits summary from the operation when not provided', () => {
+    const routes: RouteSchema[] = [
+      { method: 'get', path: '/silent' },
+    ];
+    const spec = buildOpenAPISpec(routes, info);
+    const op = spec.paths['/silent']['get'] as Record<string, unknown>;
+    expect(op.summary).toBeUndefined();
+  });
 });
