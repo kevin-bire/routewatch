@@ -1,34 +1,15 @@
-/**
- * routeTimeout.ts
- * Stores and manages timeout configurations per route.
- */
+const timeouts = new Map<string, number>();
 
-export interface RouteTimeout {
-  method: string;
-  path: string;
-  timeoutMs: number;
-  action: 'warn' | 'abort';
-}
-
-const timeouts = new Map<string, RouteTimeout>();
-
-export function makeKey(method: string, path: string): string {
+function makeKey(method: string, path: string): string {
   return `${method.toUpperCase()}:${path}`;
 }
 
-export function setRouteTimeout(
-  method: string,
-  path: string,
-  timeoutMs: number,
-  action: 'warn' | 'abort' = 'warn'
-): RouteTimeout {
-  const key = makeKey(method, path);
-  const entry: RouteTimeout = { method: method.toUpperCase(), path, timeoutMs, action };
-  timeouts.set(key, entry);
-  return entry;
+export function setRouteTimeout(method: string, path: string, ms: number): void {
+  if (ms <= 0) throw new Error("Timeout must be a positive number");
+  timeouts.set(makeKey(method, path), ms);
 }
 
-export function getRouteTimeout(method: string, path: string): RouteTimeout | undefined {
+export function getRouteTimeout(method: string, path: string): number | undefined {
   return timeouts.get(makeKey(method, path));
 }
 
@@ -36,8 +17,16 @@ export function removeRouteTimeout(method: string, path: string): boolean {
   return timeouts.delete(makeKey(method, path));
 }
 
-export function getAllTimeouts(): RouteTimeout[] {
-  return Array.from(timeouts.values());
+export function getAllTimeouts(): Array<{ method: string; path: string; ms: number }> {
+  return Array.from(timeouts.entries()).map((entry) => {
+    const [key, ms] = entry;
+    const colonIdx = key.indexOf(":");
+    return {
+      method: key.slice(0, colonIdx),
+      path: key.slice(colonIdx + 1),
+      ms,
+    };
+  });
 }
 
 export function clearTimeouts(): void {
