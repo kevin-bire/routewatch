@@ -16,6 +16,14 @@ describe('makeKey', () => {
   it('uppercases the method', () => {
     expect(makeKey('get', '/users')).toBe('GET:/users');
   });
+
+  it('handles already-uppercase method', () => {
+    expect(makeKey('DELETE', '/users')).toBe('DELETE:/users');
+  });
+
+  it('preserves path casing', () => {
+    expect(makeKey('get', '/Users/Profile')).toBe('GET:/Users/Profile');
+  });
 });
 
 describe('setRouteTimeout', () => {
@@ -37,6 +45,12 @@ describe('setRouteTimeout', () => {
     const entry = getRouteTimeout('GET', '/users');
     expect(entry?.timeoutMs).toBe(2000);
     expect(entry?.action).toBe('abort');
+  });
+
+  it('normalises lowercase method to uppercase', () => {
+    const entry = setRouteTimeout('post', '/items', 1500);
+    expect(entry.method).toBe('POST');
+    expect(getRouteTimeout('POST', '/items')?.timeoutMs).toBe(1500);
   });
 });
 
