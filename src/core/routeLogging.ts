@@ -1,42 +1,43 @@
-export interface RouteLogPolicy {
-  enabled: boolean;
-  level?: 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
+
+export interface LogPolicy {
+  level: LogLevel;
   includeHeaders?: boolean;
   includeBody?: boolean;
-  maskFields?: string[];
+  includeQuery?: boolean;
+  customFields?: Record<string, string>;
 }
 
-const store = new Map<string, RouteLogPolicy>();
+const policies = new Map<string, LogPolicy>();
 
 export function makeKey(method: string, path: string): string {
   return `${method.toUpperCase()}:${path}`;
 }
 
-export function setLogPolicy(method: string, path: string, policy: RouteLogPolicy): void {
-  store.set(makeKey(method, path), policy);
+export function setLogPolicy(method: string, path: string, policy: LogPolicy): void {
+  policies.set(makeKey(method, path), policy);
 }
 
-export function getLogPolicy(method: string, path: string): RouteLogPolicy | undefined {
-  return store.get(makeKey(method, path));
+export function getLogPolicy(method: string, path: string): LogPolicy | undefined {
+  return policies.get(makeKey(method, path));
 }
 
 export function removeLogPolicy(method: string, path: string): boolean {
-  return store.delete(makeKey(method, path));
+  return policies.delete(makeKey(method, path));
 }
 
-export function getAllLogPolicies(): Record<string, RouteLogPolicy> {
-  const result: Record<string, RouteLogPolicy> = {};
-  for (const [key, policy] of store.entries()) {
-    result[key] = policy;
-  }
-  return result;
-}
-
-export function isLoggingEnabled(method: string, path: string): boolean {
-  const policy = store.get(makeKey(method, path));
-  return policy?.enabled ?? false;
+export function getAllLogPolicies(): Array<{ method: string; path: string; policy: LogPolicy }> {
+  return Array.from(policies.entries()).map((entry) => {
+    const [key, policy] = entry;
+    const colonIdx = key.indexOf(':');
+    return {
+      method: key.substring(0, colonIdx),
+      path: key.substring(colonIdx + 1),
+      policy,
+    };
+  });
 }
 
 export function clearLogPolicies(): void {
-  store.clear();
+  policies.clear();
 }
